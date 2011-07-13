@@ -1,16 +1,16 @@
 ######################################################################
 ## Copyright (C) 2006, Roger D. Peng <rpeng@jhsph.edu>
-##     
+##
 ## This program is free software; you can redistribute it and/or modify
 ## it under the terms of the GNU General Public License as published by
 ## the Free Software Foundation; either version 2 of the License, or
 ## (at your option) any later version.
-## 
+##
 ## This program is distributed in the hope that it will be useful,
 ## but WITHOUT ANY WARRANTY; without even the implied warranty of
 ## MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
 ## GNU General Public License for more details.
-## 
+##
 ## You should have received a copy of the GNU General Public License
 ## along with this program; if not, write to the Free Software
 ## Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA
@@ -21,31 +21,36 @@
 setClass("filehashSQLite",
          representation(datafile = "character",
                         dbcon = "SQLiteConnection",
-                        drv = "SQLiteDriver"),
+                        drv = "SQLiteDriver")
          contains = "filehash"
          )
 
-createSQLite <- function(dbName) {
+createSQLite <- function(dbName, name=NULL) {
     drv <- dbDriver("SQLite")
     dbcon <- dbConnect(drv, dbName)
     on.exit({
         dbDisconnect(dbcon)
         dbUnloadDriver(drv)
     })
-
+    if is.null(name) {
+        name <- basename(dbName)
+    }
     ## Create single data table for keys and values
-    SQLcmd <- paste("CREATE TABLE \"", basename(dbName),
+    SQLcmd <- paste("CREATE TABLE \"", name,
                     "\" (\"key\" TEXT, \"value\" TEXT)", sep = "")
-    
+
     dbGetQuery(dbcon, SQLcmd)
     invisible(TRUE)
 }
 
-initializeSQLite <- function(dbName) {
+initializeSQLite <- function(dbName, name=NULL) {
     drv <- dbDriver("SQLite")
     dbcon <- dbConnect(drv, dbName)
+    if is.null(name) {
+        name <- basename(dbName)
+    }
     new("filehashSQLite", datafile = normalizePath(dbName), dbcon = dbcon,
-        drv = drv, name = basename(dbName))
+        drv = drv, name = name)
 }
 
 toString <- function(x) {
@@ -58,7 +63,7 @@ toObject <- function(x) {
     ## For compatibility with previous version
     out <- try(unserialize(x), silent = TRUE)
 
-    if(!inherits(out, "try-error")) 
+    if(!inherits(out, "try-error"))
         return(out)
     s <- strsplit(x, ":", fixed = TRUE)[[1]]
     int <- as.integer(s)
@@ -85,7 +90,7 @@ setMethod("dbFetch", signature(db = "filehashSQLite", key = "character"),
               SQLcmd <- paste("SELECT value FROM ", db@name,
                               " WHERE key = \"", key, "\"", sep = "")
               data <- dbGetQuery(db@dbcon, SQLcmd)
-              
+
               if(is.null(data$value))
                   stop(gettextf("no value associated with key '%s'", key))
               toObject(data$value)
@@ -101,11 +106,11 @@ setMethod("dbMultiFetch",
 
               if(is.null(data))
                   stop("no values associated with keys")
-              
+
               k <- as.character(data$key)
               r <- lapply(data$value, toObject)
               names(r) <- k
-              
+
               if(length(k) != length(key))
                   warning(gettextf("no values associated with keys %s",
                                    paste("'", setdiff(key, k), "'", sep = "",

@@ -27,7 +27,7 @@
     \item{dbcon}{Object of class \dQuote{SQLiteConnection}, a
       SQLite connection}
     \item{drv}{\sQuote{SQLite} driver}
-    \item{name}{character, the name of the database}
+    \item{name}{character, the name of table in the database}
   }
 }
 \section{Extends}{
